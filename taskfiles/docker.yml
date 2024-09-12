@@ -1,0 +1,72 @@
+version: "3.0"
+
+set: ['e', 'u', 'pipefail']
+shopt: ['globstar']
+
+env:
+  DOCKERFILE: "{{.TLD}}/Dockerfile"
+  PLATFORM:
+    sh: "echo ${PLATFORM:-linux/amd64}"
+  REGISTRY:
+    sh: "echo ${REGISTRY:-ghcr.io}"
+  USER_NAME:
+    sh: "echo ${USER_NAME:-pythoninthegrass}"
+  SERVICE: "the-algos"
+  VERSION:
+    sh: "echo ${VERSION:-latest}"
+
+tasks:
+  build:
+    desc: "Build the docker image"
+    summary: |
+      Build the docker image with the specified dockerfile.
+
+      The default dockerfile is `Dockerfile`.
+
+      USAGE
+        task docker:build
+    cmds:
+      - |
+        docker build -t \
+          {{.REGISTRY}}/{{.USER_NAME}}/{{.SERVICE}}:{{.VERSION}} \
+          -f {{.DOCKERFILE}} \
+          .
+
+  login:
+    desc: "Login to the container registry"
+    cmds:
+      - |
+        echo "{{.REGISTRY_PASS}}" | docker login \
+          -u {{.USER_NAME}} \
+          --password-stdin {{.REGISTRY}}
+    run: once
+    silent: true
+
+  push:
+    desc: "Push the docker image to the registry"
+    deps:
+      - login
+      - build
+    cmds:
+      - docker push {{.REGISTRY_URL}}/{{.USER_NAME}}/{{.SERVICE}}
+
+  exec:
+    desc: "Shell into a running container"
+    cmds:
+      - docker exec -it {{.SERVICE}} sh
+
+  logs:
+    desc: "Follow the logs of a running container"
+    cmds:
+      - docker logs -tf {{.SERVICE}}
+
+  stop:
+    desc: "Stop the project with docker compose"
+    cmds:
+      - docker stop {{.SERVICE}}
+
+  prune:
+    desc: "Prune docker"
+    cmds:
+      - docker system prune --all --force
+      - docker builder prune --all --force
