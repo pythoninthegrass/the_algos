@@ -1,13 +1,13 @@
-FROM rust:1.81.0-slim-bookworm as base
+FROM rust:1.81.0-slim-bookworm AS base
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install --no-install-recommends -y \
     pkg-config \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN cargo install sccache --version ^0.7
+RUN cargo install cargo-chef@^0.1
 
-RUN cargo install cargo-chef --version ^0.1
+RUN cargo install sccache@^0.7
 
 ENV RUSTC_WRAPPER=sccache SCCACHE_DIR=/sccache
 
@@ -20,7 +20,7 @@ COPY . .
 RUN --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
     cargo chef prepare --recipe-path recipe.json
 
-FROM base as builder
+FROM base AS builder
 
 WORKDIR /app
 
