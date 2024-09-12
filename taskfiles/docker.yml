@@ -42,6 +42,9 @@ tasks:
           {{.REGISTRY}}/{{.USER_NAME}}/{{.SERVICE}}:{{.VERSION}} \
           -f {{.DOCKERFILE}} \
           .
+    env:
+      DOCKER_BUILDKIT: 1
+      PROFILE: {{.PROFILE}}
 
   build-ramdisk:
     desc: "Build the docker image with a ramdisk"
@@ -59,6 +62,9 @@ tasks:
           --tmpfs /tmp/ramdisk:rw,size={{.RAMDISK_SIZE}}m,exec \
           --build-arg TMPDIR=/tmp/ramdisk \
           .
+    env:
+      DOCKER_BUILDKIT: 1
+      PROFILE: {{.PROFILE}}
 
   build-auto-ramdisk:
     desc: "Build the docker image with auto-sized ramdisk"
@@ -79,6 +85,9 @@ tasks:
           --tmpfs /tmp/ramdisk:rw,size=${RAMDISK_SIZE}m,exec \
           --build-arg TMPDIR=/tmp/ramdisk \
           .
+    env:
+      DOCKER_BUILDKIT: 1
+      PROFILE: {{.PROFILE}}
 
   check-ram:
     desc: "Check total RAM and suggest ramdisk size"
