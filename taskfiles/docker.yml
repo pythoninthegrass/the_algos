@@ -14,6 +14,17 @@ env:
   SERVICE: "the-algos"
   VERSION:
     sh: "echo ${VERSION:-latest}"
+  PROFILE:
+    sh: "echo ${PROFILE:-release}"
+  RAMDISK_SIZE:
+    sh: "echo ${RAMDISK_SIZE:-2048}"
+  GET_RAM:
+    sh: |
+      if [ "$(uname)" = "Darwin" ]; then
+        echo "sysctl -n hw.memsize | awk '{printf \"%d\", \$1/1024/1024}'"
+      else
+        echo "free -m | awk '/^Mem:/{print \$2}'"
+      fi
 
 tasks:
   build:
@@ -31,6 +42,54 @@ tasks:
           {{.REGISTRY}}/{{.USER_NAME}}/{{.SERVICE}}:{{.VERSION}} \
           -f {{.DOCKERFILE}} \
           .
+
+  build-ramdisk:
+    desc: "Build the docker image with a ramdisk"
+    summary: |
+      Build the docker image with a ramdisk of specified size.
+
+      USAGE
+        task docker:build-ramdisk
+        task docker:build-ramdisk RAMDISK_SIZE=4096
+    cmds:
+      - |
+        docker build -t \
+          {{.REGISTRY}}/{{.USER_NAME}}/{{.SERVICE}}:{{.VERSION}} \
+          -f {{.DOCKERFILE}} \
+          --tmpfs /tmp/ramdisk:rw,size={{.RAMDISK_SIZE}}m,exec \
+          --build-arg TMPDIR=/tmp/ramdisk \
+          .
+
+  build-auto-ramdisk:
+    desc: "Build the docker image with auto-sized ramdisk"
+    summary: |
+      Build the docker image with an automatically sized ramdisk based on available RAM.
+
+      USAGE
+        task docker:build-auto-ramdisk
+    cmds:
+      - |
+        TOTAL_RAM=$(eval {{.GET_RAM}})
+        RAMDISK_SIZE=$((TOTAL_RAM / 4))
+        RAMDISK_SIZE=$((RAMDISK_SIZE > 8192 ? 8192 : RAMDISK_SIZE))
+        echo "Setting ramdisk size to: ${RAMDISK_SIZE}MB"
+        docker build -t \
+          {{.REGISTRY}}/{{.USER_NAME}}/{{.SERVICE}}:{{.VERSION}} \
+          -f {{.DOCKERFILE}} \
+          --tmpfs /tmp/ramdisk:rw,size=${RAMDISK_SIZE}m,exec \
+          --build-arg TMPDIR=/tmp/ramdisk \
+          .
+
+  check-ram:
+    desc: "Check total RAM and suggest ramdisk size"
+    cmds:
+      - |
+        TOTAL_RAM=$(eval {{.GET_RAM}})
+        SUGGESTED_SIZE=$((TOTAL_RAM / 4))
+        SUGGESTED_SIZE=$((SUGGESTED_SIZE > 8192 ? 8192 : SUGGESTED_SIZE))
+        echo "Total RAM: ${TOTAL_RAM}MB"
+        echo "Suggested ramdisk size: ${SUGGESTED_SIZE}MB"
+    silent: true
 
   login:
     desc: "Login to the container registry"

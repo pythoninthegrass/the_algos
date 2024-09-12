@@ -9,7 +9,10 @@ RUN cargo install cargo-chef@^0.1
 
 RUN cargo install sccache@^0.7
 
-ENV RUSTC_WRAPPER=sccache SCCACHE_DIR=/sccache
+ENV RUSTC_WRAPPER=sccache
+ENV SCCACHE_DIR=/sccache
+ENV SCCACHE_CACHE_SIZE=5G
+ENV RUST_LOG=sccache=info
 
 FROM base AS planner
 
@@ -18,9 +21,13 @@ WORKDIR /app
 COPY . .
 
 RUN --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
-    cargo chef prepare --recipe-path recipe.json
+cargo chef prepare --recipe-path recipe.json
 
 FROM base AS builder
+
+# https://doc.rust-lang.org/cargo/reference/profiles.html
+# 4 built-in profiles: dev, release, test, and bench
+ARG PROFILE=${PROFILE:-release}
 
 WORKDIR /app
 
@@ -32,4 +39,4 @@ RUN --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
 COPY . .
 
 RUN --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
-    cargo build --release
+    cargo build --profile ${PROFILE}
