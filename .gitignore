@@ -2,8 +2,8 @@
 .cargo/
 
 # INCLUDE
-**/.gitkeep
-**/*.example
+!**/.gitkeep
+!**/*.example
 
 # General
 .DS_Store
